@@ -1,0 +1,13 @@
+# Binario
+chip8
+
+# Objetos
+src/*.o
+
+# ROMs (binarios, no van en el repo)
+roms/
+
+# Editor
+.vscode/
+*.swp
+*~

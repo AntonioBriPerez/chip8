@@ -29,11 +29,38 @@ void chip8_init(Chip8 *chip8) {
 
 void chip8_load_rom(Chip8 *chip8, const char *filename) {
 
-    FILE *file = fopen(filename, "rb");
     if (filename == NULL) {
         fprintf(stderr, "Error: No se proporcionó un archivo ROM.\n");
         return;
     }
+    FILE *file = fopen(filename, "rb");
+    //comprobamos si fdevuelve NULL
+    if (file == NULL) {
+        fprintf(stderr, "File returned NULL");
+        return; 
+    }
+
+    //cargamos la ROM en toda la memoria reservada pa chip8
     fread(&chip8->memory[0x200], 1, sizeof(chip8->memory) - 0x200, file);
     fclose(file);
+}
+
+void chip8_cycle(Chip8 *chip8){
+    //fetch
+
+    //opcode son 2 bytes, leemos dos celdas, el << 8 es para desplazar el byte alto (es Big Endian) (0x12) 8 posiciones a la izq
+    // luego combinamos con el byte bajo (0x00) usando OR: 0x1200 | 0x00  →  0x1200
+    uint16_t opcode = chip8->memory[chip8->pc] << 8 | chip8->memory[chip8->pc + 1];
+    chip8->pc += 2; 
+    switch(opcode & 0xF000){ //aplica máscara para quedarme con los 4 bits mas altos & es operador AND
+        case (0X0000):
+            break; 
+        case (0x00E0):
+            break;
+        case(0x00EE):
+            break;
+        default:
+            fprintf(stderr, "Unknown code: 0x%04X\n", opcode); break; 
+
+    }
 }

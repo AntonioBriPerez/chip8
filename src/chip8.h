@@ -8,7 +8,7 @@ typedef struct {
     uint16_t I;             // Index register
     uint16_t pc;       // Program counter
     uint16_t stack[16];     // Stack for subroutine calls
-    uint8_t sp;             // Stack pointer
+    uint8_t sp;             // Stack pointer, indice que apunta a la cima de la pila, sp dice cual es la siguiente libre
     uint8_t delay_timer; // cuenta atras a cero a 60Hz, 
     uint8_t sound_timer; // cuenta atras a cero a 60Hz, emite un pitido mientras es mayor que cero
     uint8_t keypad[16];  // estado de las 16 teclas 

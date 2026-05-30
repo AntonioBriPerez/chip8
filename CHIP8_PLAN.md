@@ -240,6 +240,75 @@ Búscalas en: **https://github.com/kripod/chip8-roms**
 
 ---
 
+## Tabla de opcodes
+
+El decode se hace en dos niveles: primero `opcode & 0xF000` (familia), luego dentro de cada familia se miran más bits.
+
+### Nivel 1 — familias (`opcode & 0xF000`)
+
+| Familia | Opcodes que contiene |
+|---------|----------------------|
+| `0x0000` | `00E0` CLS, `00EE` RET |
+| `0x1000` | `1NNN` JP addr |
+| `0x2000` | `2NNN` CALL addr |
+| `0x3000` | `3XNN` SE Vx, byte |
+| `0x4000` | `4XNN` SNE Vx, byte |
+| `0x5000` | `5XY0` SE Vx, Vy |
+| `0x6000` | `6XNN` LD Vx, byte |
+| `0x7000` | `7XNN` ADD Vx, byte |
+| `0x8000` | `8XYN` operaciones entre registros (AND, OR, XOR, ADD, SUB...) |
+| `0x9000` | `9XY0` SNE Vx, Vy |
+| `0xA000` | `ANNN` LD I, addr |
+| `0xB000` | `BNNN` JP V0, addr |
+| `0xC000` | `CXNN` RND Vx, byte |
+| `0xD000` | `DXYN` DRAW Vx, Vy, nibble |
+| `0xE000` | `EX9E` SKP Vx, `EXA1` SKNP Vx |
+| `0xF000` | `FX07/15/18/1E/29/33/55/65` misc |
+
+### Nivel 2 — dentro de familia `0x0000` (`opcode & 0x00FF`)
+
+| Opcode | Instrucción | Qué hace |
+|--------|-------------|----------|
+| `00E0` | CLS | `memset(display, 0, sizeof(display))` |
+| `00EE` | RET | `pc = stack[--sp]` |
+
+### Nivel 2 — dentro de familia `0x8000` (`opcode & 0x000F`)
+
+| Nibble bajo | Instrucción | Operación |
+|-------------|-------------|-----------|
+| `0` | LD Vx, Vy | `Vx = Vy` |
+| `1` | OR Vx, Vy | `Vx \|= Vy` |
+| `2` | AND Vx, Vy | `Vx &= Vy` |
+| `3` | XOR Vx, Vy | `Vx ^= Vy` |
+| `4` | ADD Vx, Vy | `Vx += Vy`, `VF = carry` |
+| `5` | SUB Vx, Vy | `Vx -= Vy`, `VF = !borrow` |
+| `6` | SHR Vx | `VF = Vx & 1`, `Vx >>= 1` |
+| `7` | SUBN Vx, Vy | `Vx = Vy - Vx`, `VF = !borrow` |
+| `E` | SHL Vx | `VF = Vx >> 7`, `Vx <<= 1` |
+
+### Nivel 2 — dentro de familia `0xE000` (`opcode & 0x00FF`)
+
+| Opcode | Instrucción | Qué hace |
+|--------|-------------|----------|
+| `EX9E` | SKP Vx | skip si `keypad[Vx]` pulsado |
+| `EXA1` | SKNP Vx | skip si `keypad[Vx]` NO pulsado |
+
+### Nivel 2 — dentro de familia `0xF000` (`opcode & 0x00FF`)
+
+| Opcode | Instrucción | Qué hace |
+|--------|-------------|----------|
+| `FX07` | LD Vx, DT | `Vx = delay_timer` |
+| `FX0A` | LD Vx, K | bloquea hasta tecla pulsada |
+| `FX15` | LD DT, Vx | `delay_timer = Vx` |
+| `FX18` | LD ST, Vx | `sound_timer = Vx` |
+| `FX1E` | ADD I, Vx | `I += Vx` |
+| `FX29` | LD F, Vx | `I = dirección sprite dígito Vx` |
+| `FX33` | LD B, Vx | BCD de Vx en `memory[I..I+2]` |
+| `FX55` | LD [I], Vx | vuelca V0-Vx a memoria desde I |
+| `FX65` | LD Vx, [I] | carga V0-Vx desde memoria en I |
+
+---
+
 ## Cómo pedir ayuda
 
 Cuando te atasques, ven con:

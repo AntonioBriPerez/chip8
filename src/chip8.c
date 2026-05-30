@@ -2,6 +2,7 @@
 #include "chip8.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 static const uint8_t fontset[80] = {
       0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
       0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -50,15 +51,111 @@ void chip8_cycle(Chip8 *chip8){
 
     //opcode son 2 bytes, leemos dos celdas, el << 8 es para desplazar el byte alto (es Big Endian) (0x12) 8 posiciones a la izq
     // luego combinamos con el byte bajo (0x00) usando OR: 0x1200 | 0x00  →  0x1200
+
+        // NNN ocupa los 12 bits bajos  →  máscara 0x0FFF
+        // X   ocupa bits 8-11           →  máscara 0x0F00, luego >> 8
+        // Y   ocupa bits 4-7            →  máscara 0x00F0, luego >> 4
+        // N   ocupa bits 0-3            →  máscara 0x000F
+        // NN  ocupa bits 0-7            →  máscara 0x00FF
     uint16_t opcode = chip8->memory[chip8->pc] << 8 | chip8->memory[chip8->pc + 1];
+    printf("Opcode: %d \n  PC: %d", opcode, chip8->pc); 
     chip8->pc += 2; 
     switch(opcode & 0xF000){ //aplica máscara para quedarme con los 4 bits mas altos & es operador AND
-        case (0X0000):
-            break; 
-        case (0x00E0):
+        case (0x0000):
+            switch (opcode & 0x00FF) {
+                case 0x00E0: //00E0 — CLS. Limpia el display.
+                    memset(chip8->display, 0, sizeof(chip8->display)); 
+                    chip8->draw_flag = 1; 
+                    break;
+                case 0x00EE: //00EE — RET. Vuelve de subrutina: pc = stack[--sp].
+                    chip8->pc = chip8->stack[--chip8->sp]; 
+                    break;
+            }
             break;
-        case(0x00EE):
+        case (0x1000): //1NNN — JP addr. Salta a NNN: pc = NNN.
+            chip8->pc = opcode & 0x0FFF;
             break;
+        case (0x2000): //2NNN — CALL addr. Llama a subrutina en NNN: guarda pc en stack, salta a NNN.
+            chip8->stack[chip8->sp] = chip8->pc; 
+            ++chip8->sp; 
+            chip8->pc = opcode & 0x0FFF; 
+            break;
+        case(0x3000): //3XNN — SE Vx, byte. Salta la siguiente instrucción si Vx == NN.
+            if(chip8->V[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF)){
+                chip8->pc+=2;
+            }
+            break;
+        case(0x4000): //4XNN — SNE Vx, byte. Salta la siguiente instrucción si Vx != NN.
+            if(chip8->V[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF)){
+                chip8->pc+=2;
+            }
+            break;
+        case(0x5000): //5XY0 — SE Vx, Vy. Salta la siguiente instrucción si Vx == Vy.
+            if(chip8->V[(opcode & 0x0F00) >> 8 ] == chip8->V[(opcode & 0x00F0) >> 4]) {
+                chip8->pc+=2; 
+            }
+            break;
+        case(0x6000): //6XNN — LD Vx, byte. Carga el valor NN en el registro Vx.
+            chip8->V[(opcode & 0x0F00) >> 8] = opcode & 0x00FF;
+            break;
+        case(0x7000): //7XNN — ADD Vx, byte. Vx += NN (sin carry).
+            chip8->V[(opcode & 0x0F00) >> 8] += opcode & 0x00FF; 
+            break;
+        case(0x8000): //8XYN — operaciones entre registros. Nibble bajo N indica la operación.
+            break;
+        case(0x9000): //9XY0 — SNE Vx, Vy. Salta la siguiente instrucción si Vx != Vy.
+            if(chip8->V[(opcode & 0x0F00) >> 8 ] != chip8->V[(opcode & 0x00F0) >> 4]) {
+                chip8->pc+=2; 
+            }
+            break;
+        case(0xA000): //ANNN — LD I, addr. I = NNN.
+            chip8->I = opcode & 0x0FFF; 
+            break;
+        case(0xB000): //BNNN — JP V0, addr. pc = NNN + V0.
+            chip8->pc = (opcode & 0x0FFF) + chip8->V[0];
+            break;
+        case(0xC000): //CXNN — RND Vx, byte. Vx = rand() & NN.
+            chip8 -> V[(opcode & 0x0F00) >> 8] = rand() & (opcode & 0x00FF); 
+            break;
+        case(0xD000): //DXYN — DRAW Vx, Vy, nibble. Dibuja sprite N bytes desde memory[I] en (Vx,Vy). VF=colisión.
+            break;
+        case(0xE000): //EX9E/EXA1 — SKP/SKNP. Salta según si tecla Vx está pulsada o no.
+            break;
+        case(0xF000):
+            switch (opcode & 0x00FF){
+                case (0x07): //FX07 — LD Vx, DT. Vx = delay_timer.
+                    chip8->V[(opcode & 0x0F00) >> 8] = chip8->delay_timer; 
+                    break;
+                case(0x15): //FX15 — LD DT, Vx. delay_timer = Vx.
+                    chip8->delay_timer = chip8->V[(opcode & 0x0F00) >> 8]; 
+                    break;
+                case(0x18): //FX18 — LD ST, Vx. sound_timer = Vx.
+                    chip8->sound_timer = chip8->V[(opcode & 0x0F00) >> 8]; 
+                    break;
+                case(0x1E): //FX1E — ADD I, Vx. I += Vx.
+                    chip8->I+=chip8->V[(opcode & 0x0F00) >> 8]; 
+                    break;
+                case(0x29): //FX29 — LD F, Vx. I apunta al sprite del dígito Vx en el fontset.
+                    chip8->I = chip8->V[(opcode & 0x0F00) >> 8] * 5;  // el sprite del dígito V[X] está en la dirección V[X] * 5 de memoria
+                    //Luego cuando DXYN (draw) use I, irá a buscar los bytes del sprite allí
+                    break;
+                case(0x33): //FX33 — LD B, Vx. BCD de Vx en memory[I], memory[I+1], memory[I+2].
+                    chip8->memory[chip8->I] = chip8->V[(opcode & 0x0F00) >> 8] / 100; //centenas
+                    chip8->memory[chip8->I+1] = (chip8->V[(opcode & 0x0F00) >> 8] / 10) % 10; //decenas 
+                    chip8->memory[chip8->I+2] = chip8->V[(opcode & 0x0F00) >> 8] % 10; //unidades
+                    break;
+                case(0x55): //FX55 — LD [I], Vx. Vuelca V0-Vx en memoria desde I.
+                    for(unsigned int i = 0; i<=chip8->V[(opcode & 0x0F00) >> 8]; i++){
+                        chip8->memory[chip8->I + i] = chip8->V[i];
+                    }
+                    break;
+                case(0x65): //FX65 — LD Vx, [I]. Carga V0-Vx desde memoria en I.
+                    for(unsigned int i = 0; i<=chip8->V[(opcode & 0x0F00) >> 8]; i++){
+                        chip8->V[i] = chip8->memory[chip8->I + i];
+                    }
+                    break;
+            }
+        break;
         default:
             fprintf(stderr, "Unknown code: 0x%04X\n", opcode); break; 
 

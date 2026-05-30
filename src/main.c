@@ -25,11 +25,13 @@ int main(int argc, char *argv[]) {
                 cleanup(renderer, window); 
                 return 0; 
             }
-
+            
         }
         
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        chip8_cycle(&chip8); 
         SDL_RenderClear(renderer);
+        SDL_Delay(2); 
     }
     return 0;
 }

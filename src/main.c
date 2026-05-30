@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include "chip8.h"
+#include "display.h"
 void cleanup(SDL_Renderer *renderer, SDL_Window *window){
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
@@ -29,9 +30,14 @@ int main(int argc, char *argv[]) {
         }
         
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        chip8_cycle(&chip8); 
         SDL_RenderClear(renderer);
-        SDL_Delay(2); 
+        chip8_cycle(&chip8); 
+        if(chip8.draw_flag == 1) {
+            display_render(renderer, chip8.display);
+            chip8.draw_flag = 0; 
+        }
+        SDL_RenderPresent(renderer); 
+        // SDL_Delay(2); 
     }
     return 0;
 }

@@ -117,8 +117,42 @@ void chip8_cycle(Chip8 *chip8){
         case(0xC000): //CXNN — RND Vx, byte. Vx = rand() & NN.
             chip8 -> V[(opcode & 0x0F00) >> 8] = rand() & (opcode & 0x00FF); 
             break;
-        case(0xD000): //DXYN — DRAW Vx, Vy, nibble. Dibuja sprite N bytes desde memory[I] en (Vx,Vy). VF=colisión.
-            break;
+        case(0xD000): { //DXYN — DRAW Vx, Vy, nibble. Dibuja sprite N bytes desde memory[I] en (Vx,Vy). VF=colisión.
+                // 1. Extrae X, Y, N del opcode
+                // 2. Vx = V[X], Vy = V[Y] — posición en pantalla
+                // 3. VF = 0 — reset del flag de colisión
+                // 4. Para cada fila row de 0 a N:
+                //     - Lee el byte sprite = memory[I + row]
+                //     - Para cada bit col de 0 a 7:
+                //         - Si el bit está activo (sprite & (0x80 >> col))
+                //     - Calcula el pixel en el display: pos = (Vy + row) * 64 + (Vx + col)
+                //     - Si ese pixel ya estaba activo → colisión: VF = 1
+                //     - XOR el pixel: display[pos] ^= 1
+                // 5. Activa draw_flag
+                uint8_t x = (opcode & 0x0F00) >> 8;
+                uint8_t y = (opcode & 0x00F0) >> 4;
+                uint8_t n = (opcode & 0x00F);
+                uint8_t posX = chip8->V[x];
+                uint8_t posY = chip8->V[y];
+                chip8->V[0xF] = 0; // reset flag colision
+                for(int row = 0; row < n; row++){
+                    uint8_t byteSpray = chip8->memory[chip8->I+row]; 
+                    for(int col = 0; col<8; col++) {
+                        if (byteSpray & (0x80 >> col)) {
+                            uint8_t pxPos = (posY+row)*64 + (posX+col);
+                            if(chip8->display[pxPos]){
+                                chip8->V[0xF] = 1; 
+
+                            }
+                            chip8->display[pxPos] ^=1;
+                            chip8->draw_flag = 1; 
+                        } 
+                    }
+                }
+                break;
+        }
+
+
         case(0xE000): //EX9E/EXA1 — SKP/SKNP. Salta según si tecla Vx está pulsada o no.
             break;
         case(0xF000):

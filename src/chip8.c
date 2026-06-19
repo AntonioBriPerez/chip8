@@ -58,14 +58,14 @@ void chip8_cycle(Chip8 *chip8){
         // N   ocupa bits 0-3            →  máscara 0x000F
         // NN  ocupa bits 0-7            →  máscara 0x00FF
     uint16_t opcode = chip8->memory[chip8->pc] << 8 | chip8->memory[chip8->pc + 1];
-    printf("Opcode: %d \n  PC: %d", opcode, chip8->pc); 
+    // printf("PC: 0x%04X  Opcode: 0x%04X\n", chip8->pc, opcode);
     chip8->pc += 2; 
     switch(opcode & 0xF000){ //aplica máscara para quedarme con los 4 bits mas altos & es operador AND
         case (0x0000):
             switch (opcode & 0x00FF) {
                 case 0x00E0: //00E0 — CLS. Limpia el display.
                     memset(chip8->display, 0, sizeof(chip8->display)); 
-                    chip8->draw_flag = 1; 
+                    chip8->draw_flag = 1; //orden de pintar
                     break;
                 case 0x00EE: //00EE — RET. Vuelve de subrutina: pc = stack[--sp].
                     chip8->pc = chip8->stack[--chip8->sp]; 
@@ -139,7 +139,8 @@ void chip8_cycle(Chip8 *chip8){
                     uint8_t byteSpray = chip8->memory[chip8->I+row]; 
                     for(int col = 0; col<8; col++) {
                         if (byteSpray & (0x80 >> col)) {
-                            uint8_t pxPos = (posY+row)*64 + (posX+col);
+                            uint16_t pxPos = ((posY + row) % 32) * 64 + ((posX + col) % 64); //la pantallas es 64x32 = 2048px
+                            //cualquier pixel fila 4 o mas desbordaría con uint8_t, es fácilmente visible si lo cambio a 8 bits
                             if(chip8->display[pxPos]){
                                 chip8->V[0xF] = 1; 
 

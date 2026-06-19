@@ -19,6 +19,8 @@ int main(int argc, char *argv[]) {
     Chip8 chip8;
     chip8_init(&chip8);
     chip8_load_rom(&chip8, argv[1]);
+
+
     for (;;) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -30,13 +32,13 @@ int main(int argc, char *argv[]) {
         }
         
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
-        chip8_cycle(&chip8); 
-        if(chip8.draw_flag == 1) {
-            display_render(renderer, chip8.display);
+        SDL_RenderClear(renderer); // se borra la pantalla al inicio
+        chip8_cycle(&chip8);  // se ejecuta el ciclo
+        if(chip8.draw_flag == 1) { //si flag de dibujar
+            display_render(renderer, chip8.display); 
             chip8.draw_flag = 0; 
+            SDL_RenderPresent(renderer); //mostramos resultado, tiene que ser aquí dentro de lo contrario RenderClear borra lo dibujado antes de verlo
         }
-        SDL_RenderPresent(renderer); 
         // SDL_Delay(2); 
     }
     return 0;

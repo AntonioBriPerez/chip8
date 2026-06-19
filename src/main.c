@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include "chip8.h"
 #include "display.h"
+#include "input.h"
 void cleanup(SDL_Renderer *renderer, SDL_Window *window){
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
@@ -28,6 +29,7 @@ int main(int argc, char *argv[]) {
                 cleanup(renderer, window); 
                 return 0; 
             }
+        read_events(&event, chip8.keypad);
             
         }
         
@@ -39,7 +41,6 @@ int main(int argc, char *argv[]) {
             chip8.draw_flag = 0; 
             SDL_RenderPresent(renderer); //mostramos resultado, tiene que ser aquí dentro de lo contrario RenderClear borra lo dibujado antes de verlo
         }
-        // SDL_Delay(2); 
     }
     return 0;
 }

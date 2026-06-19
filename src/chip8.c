@@ -102,6 +102,54 @@ void chip8_cycle(Chip8 *chip8){
             chip8->V[(opcode & 0x0F00) >> 8] += opcode & 0x00FF; 
             break;
         case(0x8000): //8XYN — operaciones entre registros. Nibble bajo N indica la operación.
+            // X = (opcode & 0x0F00) >> 8  →  aísla el tercer nibble y desplaza 8 bits → índice de Vx
+            // Y = (opcode & 0x00F0) >> 4  →  aísla el segundo nibble y desplaza 4 bits → índice de Vy
+            switch(opcode & 0x000F){
+                case (0x0): //8XY0 — LD Vx, Vy. Vx = Vy.
+                    chip8->V[(opcode & 0x0F00) >> 8] = chip8->V[(opcode & 0x00F0) >> 4];
+                    break;
+                case (0x1): //8XY1 - OR Vx, VY
+                    chip8->V[(opcode & 0x0F00) >> 8] |= chip8->V[(opcode & 0x00F0) >> 4];
+                    break;
+            
+                case (0x2): //8XY2 - AND Vx, VY
+                    chip8->V[(opcode & 0x0F00) >> 8] &= chip8->V[(opcode & 0x00F0) >> 4];
+                    break;
+                case (0x3): //8XY3 - XOR Vx, Vy
+                    chip8->V[(opcode & 0x0F00) >> 8] ^= chip8->V[(opcode & 0x00F0) >> 4];
+                    break;
+                case (0x4): { //8XY4 - Vx += Vy
+                    uint16_t result = chip8->V[(opcode & 0x0F00) >> 8] + chip8->V[(opcode & 0x00F0) >> 4];
+                    chip8->V[0xF] = result > 255 ? 1 : 0;
+                    chip8->V[(opcode & 0x0F00) >> 8] = result & 0xFF;
+                    break;
+                }
+                case (0x5):{ //SUB Vx, Vy | Vx -= Vy, VF = !borrow
+                    if(chip8->V[(opcode & 0x0F00) >> 8] >= chip8->V[(opcode & 0x00F0) >> 4]){
+                        //V[F] = 1 (no hay borrow)
+                        chip8->V[0xF] = 1;
+                    }
+                    else if(chip8->V[(opcode & 0x0F00) >> 8] < chip8->V[(opcode & 0x00F0) >> 4]) {
+                        //V[F] = 0 (hay borrow)
+                        chip8->V[0xF] = 0;
+                    }
+                    chip8->V[(opcode & 0x0F00) >> 8] -= chip8->V[(opcode & 0x00F0) >> 4];
+                    break; 
+                }
+                case (0x6): //SHR Vx | VF = Vx & 1, Vx >>= 1
+                    chip8->V[0xF] = chip8->V[(opcode & 0x0F00) >> 8]  & 1; 
+                    chip8->V[(opcode & 0x0F00) >> 8] >>=1; 
+                    break; 
+                case (0x7): //SUBN Vx, Vy | Vx = Vy - Vx, VF = !borrow
+                    chip8->V[0xF] = chip8->V[(opcode & 0x00F0) >> 4] >= chip8->V[(opcode & 0x0F00) >> 8] ? 1: 0;
+                    chip8->V[(opcode & 0x0F00) >> 8] = chip8->V[(opcode & 0x00F0) >> 4] - chip8->V[(opcode & 0x0F00) >> 8];
+                    break; 
+                case (0x8): //SHL Vx | VF = Vx >> 7, Vx <<= 1
+                    chip8->V[0xF] = chip8->V[(opcode & 0x0F00) >> 8]  >> 7; 
+                    chip8->V[(opcode & 0x0F00) >> 8] <<=1; 
+                    break; 
+            }
+
             break;
         case(0x9000): //9XY0 — SNE Vx, Vy. Salta la siguiente instrucción si Vx != Vy.
             if(chip8->V[(opcode & 0x0F00) >> 8 ] != chip8->V[(opcode & 0x00F0) >> 4]) {
